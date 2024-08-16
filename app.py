@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, render_template, redirect, url_for
 from werkzeug.utils import secure_filename
 import sqlite3
-from model import predict_label  # Import the prediction function from model.py
+from model import predict_label, train_model  # Import the model functions
 
 app = Flask(__name__)
 
@@ -24,7 +24,7 @@ def init_db():
 # Initialize the database at the start
 init_db()
 
-# Route to upload and label images
+# Route to upload and label images (Main Page)
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -66,17 +66,32 @@ def classify():
             file.save(filepath)
 
             # Predict the label using the model
-            predicted_label = predict_label(filepath)
+            predicted_label = int(predict_label(filepath))
 
-            # Map label '1' to 'Kali'
-            if predicted_label == 1:
-                predicted_label = "Kali"
-            else:
-                predicted_label = int(predicted_label)  # Convert to integer for other labels
+            # Map label to its description
+            label_mapping = {
+                1: "Sinister",
+                2: "Sad/Sinister",
+                3: "Sad",
+                4: "Stupid",
+                5: "Stupid/Sinister"
+            }
+            predicted_label = label_mapping.get(predicted_label, predicted_label)
 
             return render_template('result.html', image_url=filepath, label=predicted_label)
 
     return render_template('classify.html')
+
+# Route to retrain the model
+@app.route('/retrain', methods=['POST'])
+def retrain():
+    train_model()  # Retrain the model when the button is pressed
+    return render_template('retrain_success.html')
+
+# Explanation Page
+@app.route('/explanation')
+def explanation():
+    return render_template('explanation.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
